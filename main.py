@@ -5,7 +5,7 @@ from pygame.locals import *
 class Game:
     def __init__(self, size: tuple[int, int]):
         pygame.init()
-        self.game_display = pygame.display.set_mode(size)
+        self.surface = pygame.display.set_mode(size)
         pygame.display.set_caption("Boids")
 
         self.BKG_COLOR = (255, 255, 255) # white
@@ -17,18 +17,22 @@ class Game:
                 quit()
 
     def _get_game_objects(self):
-        pass
+        objects = [Boid(self.surface, pygame.Vector2(400, 300))]
+        return objects
 
     def play(self):
         while True:
             self._event_handler()
 
-            self.game_display.fill(self.BKG_COLOR)
+            self.surface.fill(self.BKG_COLOR)
+            for object in self._get_game_objects():
+                object.animate(0)
 
             pygame.display.update()
 
 class GameObject:
-    def __init__(self, pos: pygame.math.Vector2):
+    def __init__(self, surface, pos: pygame.Vector2):
+        self.surface = surface
         self.pos = pos
 
     def animate(self):
@@ -41,28 +45,35 @@ class Obstacle(GameObject):
 class Character(GameObject):
     def animate(self, speed):
         dir = self._get_dir()
-        vel = dir.scale_to_length(speed)
-        pos_new = (self.pos.x + vel.x, self.pos.y + vel.y)
+        #vel = dir.scale_to_length(speed)
+        #pos_new = (self.pos.x + vel.x, self.pos.y + vel.y)
 
-        self.orient(dir)
-        self.move(pos_new)
+        #self.move(pos_new)
+        self.draw(dir)
 
     def _get_dir(self):
-        pass
-
-    def orient(self):
         pass
 
     def move(self):
         pass
 
+    def draw(self, dir: pygame.Vector2):
+        vertices = [
+            pygame.Vector2(self.pos + self.scale*dir.rotate(120*i))
+            for i in range(3)
+        ] # for an equilateral triangle centered at `pos`
+
+        pygame.draw.polygon(self.surface, "black", vertices)
+
 class Boid(Character):
+    scale = 10
+
     def _get_flock(self, r):
         # Returns `Flock` object with other boids within radius r
         pass
 
-    def _get_dir(self) -> pygame.math.Vector2:
-        pass
+    def _get_dir(self) -> pygame.Vector2:
+        return pygame.Vector2(1, 0)
 
 class Hoik(Character):
     def _get_dir(self):
