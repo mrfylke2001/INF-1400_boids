@@ -1,21 +1,35 @@
 import numpy as np
-# import pygame
-
-def normalize(vec: tuple[float, float]):
-    mag = np.sqrt(vec[0]**2 + vec[1]**2)
-    unit_vec = (vec[0]/mag, vec[1]/mag)
-
-    return unit_vec
+import pygame
+from pygame.locals import *
 
 class Game:
-    pass
+    def __init__(self, size: tuple[int, int]):
+        pygame.init()
+        self.game_display = pygame.display.set_mode(size)
+        pygame.display.set_caption("Boids")
 
-class GameSpace:
-    pass
+        self.BKG_COLOR = (255, 255, 255) # white
+
+    def _event_handler(self):
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                pygame.quit()
+                quit()
+
+    def _get_game_objects(self):
+        pass
+
+    def play(self):
+        while True:
+            self._event_handler()
+
+            self.game_display.fill(self.BKG_COLOR)
+
+            pygame.display.update()
 
 class GameObject:
-    def __init__(self, space: GameSpace, pos: tuple[float, float]):
-        self.animate()
+    def __init__(self, pos: pygame.math.Vector2):
+        self.pos = pos
 
     def animate(self):
         pass
@@ -25,15 +39,15 @@ class Obstacle(GameObject):
         pass
 
 class Character(GameObject):
-    def animate(self):
-        vel = self._get_vel()
-        dir = normalize(vel)
-        pos_new = (self.pos[0] + vel[0], self.pos[1] + vel[1])
+    def animate(self, speed):
+        dir = self._get_dir()
+        vel = dir.scale_to_length(speed)
+        pos_new = (self.pos.x + vel.x, self.pos.y + vel.y)
 
         self.orient(dir)
         self.move(pos_new)
 
-    def _get_vel(self):
+    def _get_dir(self):
         pass
 
     def orient(self):
@@ -47,11 +61,11 @@ class Boid(Character):
         # Returns `Flock` object with other boids within radius r
         pass
 
-    def _get_vel(self):
+    def _get_dir(self) -> pygame.math.Vector2:
         pass
 
 class Hoik(Character):
-    def _get_vel(self):
+    def _get_dir(self):
         pass
 
     def _get_target(self):
@@ -68,3 +82,7 @@ class Flock:
     def avg_dir(self):
         # Returns average heading of boids in flock as a unit vector
         pass
+
+if __name__ == "__main__":
+    boids_game = Game((800, 600))
+    boids_game.play()
