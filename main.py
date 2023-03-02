@@ -30,7 +30,7 @@ class Game:
         speed = 5
         vel = pygame.Vector2(speed, 0).rotate(random.randint(0, 359))
 
-        boid = Boid(self.surface, pos, vel, self.BOID_COLOR)
+        boid = Boid(self, pos, vel, self.BOID_COLOR)
         return boid
 
     def _event_handler(self):
@@ -58,8 +58,8 @@ class Game:
             pygame.display.update()
 
 class GameObject:
-    def __init__(self, surface: pygame.Surface, p_init, v_init, color):
-        self.surface = surface
+    def __init__(self, game, p_init, v_init, color):
+        self.game = game
         self.pos = p_init # initial position
         self.vel = v_init # initial velocity
         self.color = color
@@ -81,8 +81,8 @@ class Boid(GameObject):
     def _stay_within_bounds(self):
         buffer = 30
         x_min, y_min = buffer, buffer
-        x_max = self.surface.get_width() - buffer
-        y_max = self.surface.get_height() - buffer
+        x_max = self.game.surface.get_width() - buffer
+        y_max = self.game.surface.get_height() - buffer
 
         vel = pygame.Vector2(0, 0)
 
@@ -119,7 +119,7 @@ class Boid(GameObject):
             for i in range(3)
         ] # for an equilateral triangle centered at `pos`
 
-        pygame.draw.polygon(self.surface, self.color, vertices)
+        pygame.draw.polygon(self.game.surface, self.color, vertices)
 
 class Hoik(GameObject):
     def _get_dir(self):
