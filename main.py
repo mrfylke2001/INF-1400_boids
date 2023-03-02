@@ -51,8 +51,8 @@ class Obstacle(GameObject):
     pass
 
 class Boid(GameObject):
-    scale = 10
-    dir = pygame.Vector2(1, 0) # direction character points
+    scale = 6
+    vel = pygame.Vector2(3, 4)
 
     def _get_flock(self, r):
         # Returns `Flock` object with other boids within radius r
@@ -66,27 +66,31 @@ class Boid(GameObject):
 
         vel = pygame.Vector2(0, 0)
 
+        rebound_speed = 5
+
         if self.pos.x < x_min:
-            vel.x = 10
+            vel.x = rebound_speed
         elif self.pos.x > x_max:
-            vel.x = -10
+            vel.x = -rebound_speed
 
         if self.pos.y < y_min:
-            vel.y = 10
+            vel.y = rebound_speed
         elif self.pos.y > y_max:
-            vel.y = -10
+            vel.y = -rebound_speed
 
         return vel
 
-    def _get_vel(self) -> pygame.Vector2:
-        v1 = pygame.Vector2(2, 0)
+    def _addtl_vel(self) -> pygame.Vector2:
         v2 = self._stay_within_bounds()
 
-        return v1 + v2
+        return v2
 
     def move(self):
-        self.pos.x += self._get_vel().x
-        self.pos.y += self._get_vel().y
+        self.vel += self._addtl_vel()
+        self.dir = self.vel.normalize()
+
+        self.pos.x += self.vel.x
+        self.pos.y += self.vel.y
 
     def draw(self):
         vertices = [
