@@ -12,7 +12,7 @@ class Game:
         self.surface = pygame.display.set_mode(size)
         pygame.display.set_caption("Boids")
 
-        self._set_up_objects(16)
+        self._set_up_objects(32)
 
     def _set_up_objects(self, num_boids):
         self.boids = [
@@ -85,13 +85,16 @@ class Boid(GameObject):
         ])
         return local_flock
     
-    def _toward_local_flock_center(self) -> pygame.Vector2:
+    def _toward_local_flock_center(self, flock) -> pygame.Vector2:
         weight = 0.02 # scale factor for resulting change in velocity
-
-        local_flock = self._get_local_flock(r=60)
-        dv = weight*(local_flock.avg_pos() - self.pos)
-
+        dv = weight*(flock.avg_pos() - self.pos)
         return dv
+    
+    def _toward_local_flock_vel(self, flock) -> pygame.Vector2:
+        weight = 0.05 # scale factor for resulting change in velocity
+        dv = weight*(flock.avg_vel() - self.vel)
+        return dv
+
 
     def _stay_within_bounds(self) -> pygame.Vector2:
         buffer = 30
@@ -116,10 +119,13 @@ class Boid(GameObject):
 
     def _accl(self) -> pygame.Vector2:
         # Calculate 'acceleration' i.e. change in velocity
-        dv1 = self._toward_local_flock_center()
-        dv2 = self._stay_within_bounds()
+        local_flock = self._get_local_flock(r=60)
+        dv1 = self._toward_local_flock_center(local_flock)
+        dv2 = self._toward_local_flock_vel(local_flock)
 
-        dv = dv1 + dv2
+        dv3 = self._stay_within_bounds()
+
+        dv = dv1 + dv2 + dv3
         return dv
     
     def _update_vel(self):
@@ -163,11 +169,17 @@ class Flock:
         for boid in self.boids:
             p_sum += boid.pos
         p_avg = p_sum / self.num_boids
+
         return p_avg
 
-    def avg_dir(self):
-        # Returns average heading of boids in flock as a unit vector
-        pass
+    def avg_vel(self):
+        # Returns average velocity of boids in flock as a unit vector
+        v_sum = pygame.Vector2(0, 0)
+        for boid in self.boids:
+            v_sum += boid.vel
+        v_avg = v_sum / self.num_boids
+
+        return v_avg
 
 if __name__ == "__main__":
     boids_game = Game((800, 600))
