@@ -3,12 +3,14 @@ import pygame
 from pygame.locals import *
 
 class Game:
+    BKG_COLOR = (255, 255, 255) # white
+
     def __init__(self, size: tuple[int, int]):
         pygame.init()
         self.surface = pygame.display.set_mode(size)
         pygame.display.set_caption("Boids")
 
-        self.BKG_COLOR = (255, 255, 255) # white
+        self.objects = [Boid(self.surface, pygame.Vector2(400, 300))]
 
     def _event_handler(self):
         for event in pygame.event.get():
@@ -16,66 +18,63 @@ class Game:
                 pygame.quit()
                 quit()
 
-    def _get_game_objects(self):
-        objects = [Boid(self.surface, pygame.Vector2(400, 300))]
-        return objects
+    def _move_objects(self):
+        for object in self.objects:
+            object.move()
+
+    def _draw_objects(self):
+        for object in self.objects:
+            object.draw()
 
     def play(self):
         while True:
             self._event_handler()
 
             self.surface.fill(self.BKG_COLOR)
-            for object in self._get_game_objects():
-                object.animate(0)
+            self._move_objects()
+            self._draw_objects()
 
             pygame.display.update()
 
 class GameObject:
-    def __init__(self, surface, pos: pygame.Vector2):
+    def __init__(self, surface: pygame.Surface, pos: pygame.Vector2):
         self.surface = surface
         self.pos = pos
-
-    def animate(self):
-        pass
-
-class Obstacle(GameObject):
-    def animate(self):
-        pass
-
-class Character(GameObject):
-    def animate(self, speed):
-        dir = self._get_dir()
-        #vel = dir.scale_to_length(speed)
-        #pos_new = (self.pos.x + vel.x, self.pos.y + vel.y)
-
-        #self.move(pos_new)
-        self.draw(dir)
-
-    def _get_dir(self):
-        pass
 
     def move(self):
         pass
 
-    def draw(self, dir: pygame.Vector2):
-        vertices = [
-            pygame.Vector2(self.pos + self.scale*dir.rotate(120*i))
-            for i in range(3)
-        ] # for an equilateral triangle centered at `pos`
+    def draw(self):
+        pass
 
-        pygame.draw.polygon(self.surface, "black", vertices)
+class Obstacle(GameObject):
+    pass
 
-class Boid(Character):
+class Boid(GameObject):
     scale = 10
+    dir = pygame.Vector2(1, 0) # direction character points
 
     def _get_flock(self, r):
         # Returns `Flock` object with other boids within radius r
         pass
 
-    def _get_dir(self) -> pygame.Vector2:
+    def _get_vel(self) -> pygame.Vector2:
         return pygame.Vector2(1, 0)
 
-class Hoik(Character):
+    def move(self):
+        #self.pos.x += self._get_vel().x
+        #self.pos.y += self._get_vel().y
+        pass
+
+    def draw(self):
+        vertices = [
+            pygame.Vector2(self.pos + self.scale*self.dir.rotate(120*i))
+            for i in range(3)
+        ] # for an equilateral triangle centered at `pos`
+
+        pygame.draw.polygon(self.surface, "black", vertices)
+
+class Hoik(GameObject):
     def _get_dir(self):
         pass
 
