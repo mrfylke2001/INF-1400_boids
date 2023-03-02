@@ -12,7 +12,7 @@ class Game:
         self.surface = pygame.display.set_mode(size)
         pygame.display.set_caption("Boids")
 
-        self._set_up_objects(32)
+        self._set_up_objects(48)
 
     def _set_up_objects(self, num_boids):
         self.boids = [
@@ -81,7 +81,7 @@ class Boid(GameObject):
         local_flock = Flock([
             boid
             for boid in self.game.boids
-            if (boid.pos - self.pos).magnitude() <= r
+            if self.pos.distance_to(boid.pos) <= r
         ])
         return local_flock
     
@@ -94,7 +94,16 @@ class Boid(GameObject):
         weight = 0.05 # scale factor for resulting change in velocity
         dv = weight*(flock.avg_vel() - self.vel)
         return dv
+    
+    def _keep_buffer(self, flock) -> pygame.Vector2:
+        r_min = 16 # min comfortable distance between boids
 
+        dv = pygame.Vector2(0, 0)
+        for boid in flock.boids:
+            if self.pos.distance_to(boid.pos) < r_min:
+                dv -= (boid.pos - self.pos)
+
+        return dv
 
     def _stay_within_bounds(self) -> pygame.Vector2:
         buffer = 30
@@ -122,14 +131,15 @@ class Boid(GameObject):
         local_flock = self._get_local_flock(r=60)
         dv1 = self._toward_local_flock_center(local_flock)
         dv2 = self._toward_local_flock_vel(local_flock)
+        dv3 = self._keep_buffer(local_flock)
 
-        dv3 = self._stay_within_bounds()
+        dv4 = self._stay_within_bounds()
 
-        dv = dv1 + dv2 + dv3
+        dv = dv1 + dv2 + dv3 + dv4
         return dv
     
     def _update_vel(self):
-        max_speed = 7
+        max_speed = 6
         self.vel += self._accl()
         if self.vel.magnitude() > max_speed:
             self.vel.scale_to_length(max_speed)
