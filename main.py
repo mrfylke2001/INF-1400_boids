@@ -58,13 +58,35 @@ class Boid(GameObject):
         # Returns `Flock` object with other boids within radius r
         pass
 
+    def _stay_within_bounds(self):
+        buffer = 30
+        x_min, y_min = buffer, buffer
+        x_max = self.surface.get_width() - buffer
+        y_max = self.surface.get_height() - buffer
+
+        vel = pygame.Vector2(0, 0)
+
+        if self.pos.x < x_min:
+            vel.x = 10
+        elif self.pos.x > x_max:
+            vel.x = -10
+
+        if self.pos.y < y_min:
+            vel.y = 10
+        elif self.pos.y > y_max:
+            vel.y = -10
+
+        return vel
+
     def _get_vel(self) -> pygame.Vector2:
-        return pygame.Vector2(1, 0)
+        v1 = pygame.Vector2(2, 0)
+        v2 = self._stay_within_bounds()
+
+        return v1 + v2
 
     def move(self):
-        #self.pos.x += self._get_vel().x
-        #self.pos.y += self._get_vel().y
-        pass
+        self.pos.x += self._get_vel().x
+        self.pos.y += self._get_vel().y
 
     def draw(self):
         vertices = [
