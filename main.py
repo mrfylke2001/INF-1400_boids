@@ -86,7 +86,7 @@ class Boid(GameObject):
         return local_flock
     
     def _toward_local_flock_center(self) -> pygame.Vector2:
-        weight = 0.01 # scale factor for resulting change in velocity
+        weight = 0.02 # scale factor for resulting change in velocity
 
         local_flock = self._get_local_flock(r=60)
         dv = weight*(local_flock.avg_pos() - self.pos)
@@ -121,10 +121,17 @@ class Boid(GameObject):
 
         dv = dv1 + dv2
         return dv
+    
+    def _update_vel(self):
+        max_speed = 7
+        self.vel += self._accl()
+        if self.vel.magnitude() > max_speed:
+            self.vel.scale_to_length(max_speed)
+
+        self.dir = self.vel.normalize()
 
     def move(self):
-        self.vel += self._accl()
-        self.dir = self.vel.normalize()
+        self._update_vel()
 
         self.pos.x += self.vel.x
         self.pos.y += self.vel.y
