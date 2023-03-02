@@ -12,7 +12,7 @@ class Game:
         self.surface = pygame.display.set_mode(size)
         pygame.display.set_caption("Boids")
 
-        self._set_up_objects(48)
+        self._set_up_objects(64)
 
     def _set_up_objects(self, num_boids):
         self.boids = [
@@ -29,7 +29,7 @@ class Game:
         pos = pygame.Vector2(x, y)
 
         # Initial velocity has given speed in a random direction
-        speed = 3
+        speed = 2
         vel = pygame.Vector2(speed, 0).rotate(random.randint(0, 359))
 
         boid = Boid(self, pos, vel, self.BOID_COLOR)
@@ -86,13 +86,11 @@ class Boid(GameObject):
         return local_flock
     
     def _toward_local_flock_center(self, flock) -> pygame.Vector2:
-        weight = 0.02 # scale factor for resulting change in velocity
-        dv = weight*(flock.avg_pos() - self.pos)
+        dv = flock.avg_pos() - self.pos
         return dv
     
     def _toward_local_flock_vel(self, flock) -> pygame.Vector2:
-        weight = 0.05 # scale factor for resulting change in velocity
-        dv = weight*(flock.avg_vel() - self.vel)
+        dv = flock.avg_vel() - self.vel
         return dv
     
     def _keep_buffer(self, flock) -> pygame.Vector2:
@@ -128,24 +126,27 @@ class Boid(GameObject):
 
     def _accl(self) -> pygame.Vector2:
         # Calculate 'acceleration' i.e. change in velocity
-        local_flock = self._get_local_flock(r=60)
+        local_flock = self._get_local_flock(r=50)
         dv1 = self._toward_local_flock_center(local_flock)
         dv2 = self._toward_local_flock_vel(local_flock)
         dv3 = self._keep_buffer(local_flock)
 
         dv4 = self._stay_within_bounds()
 
-        dv = dv1 + dv2 + dv3 + dv4
+        dv = 0.02*dv1 + 0.03*dv2 + 0.4*dv3 + dv4
         return dv
     
     def _update_vel(self):
-        max_speed = 6
+        max_speed = 4
         self.vel += self._accl()
         if self.vel.magnitude() > max_speed:
             self.vel.scale_to_length(max_speed)
 
-        self.dir = self.vel.normalize()
-
+        if self.vel == pygame.Vector2(0, 0):
+            self.dir = pygame.Vector2(0, 1)
+        else:
+            self.dir = self.vel.normalize()
+        
     def move(self):
         self._update_vel()
 
