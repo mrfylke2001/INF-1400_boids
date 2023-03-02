@@ -1,16 +1,37 @@
 import numpy as np
 import pygame
 from pygame.locals import *
+import random
 
 class Game:
-    BKG_COLOR = (255, 255, 255) # white
+    BKG_COLOR = (61, 61, 61)
+    BOID_COLOR = (90, 142, 191)
 
     def __init__(self, size: tuple[int, int]):
         pygame.init()
         self.surface = pygame.display.set_mode(size)
         pygame.display.set_caption("Boids")
 
-        self.objects = [Boid(self.surface, pygame.Vector2(400, 300))]
+        self._set_up_objects(5)
+
+    def _set_up_objects(self, num_boids):
+        self.objects = [
+            self._generate_boid()
+            for _ in range(num_boids)
+        ]
+
+    def _generate_boid(self):
+        # Initial position is randomized within the game window
+        x = random.randint(0, self.surface.get_width())
+        y = random.randint(0, self.surface.get_height())
+        pos = pygame.Vector2(x, y)
+
+        # Initial velocity has given speed in a random direction
+        speed = 5
+        vel = pygame.Vector2(speed, 0).rotate(random.randint(0, 359))
+
+        boid = Boid(self.surface, pos, vel, self.BOID_COLOR)
+        return boid
 
     def _event_handler(self):
         for event in pygame.event.get():
@@ -37,9 +58,11 @@ class Game:
             pygame.display.update()
 
 class GameObject:
-    def __init__(self, surface: pygame.Surface, pos: pygame.Vector2):
+    def __init__(self, surface: pygame.Surface, p_init, v_init, color):
         self.surface = surface
-        self.pos = pos
+        self.pos = p_init # initial position
+        self.vel = v_init # initial velocity
+        self.color = color
 
     def move(self):
         pass
@@ -51,9 +74,6 @@ class Obstacle(GameObject):
     pass
 
 class Boid(GameObject):
-    scale = 6
-    vel = pygame.Vector2(3, 4)
-
     def _get_flock(self, r):
         # Returns `Flock` object with other boids within radius r
         pass
@@ -66,7 +86,7 @@ class Boid(GameObject):
 
         vel = pygame.Vector2(0, 0)
 
-        rebound_speed = 5
+        rebound_speed = 3
 
         if self.pos.x < x_min:
             vel.x = rebound_speed
@@ -93,12 +113,13 @@ class Boid(GameObject):
         self.pos.y += self.vel.y
 
     def draw(self):
+        scale = 6
         vertices = [
-            pygame.Vector2(self.pos + self.scale*self.dir.rotate(120*i))
+            pygame.Vector2(self.pos + scale*self.dir.rotate(120*i))
             for i in range(3)
         ] # for an equilateral triangle centered at `pos`
 
-        pygame.draw.polygon(self.surface, "black", vertices)
+        pygame.draw.polygon(self.surface, self.color, vertices)
 
 class Hoik(GameObject):
     def _get_dir(self):
