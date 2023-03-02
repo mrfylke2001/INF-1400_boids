@@ -50,6 +50,7 @@ class Game:
             object.draw()
 
     def play(self):
+        # Starts game loop
         while True:
             self._event_handler()
 
@@ -86,14 +87,17 @@ class Boid(GameObject):
         return local_flock
     
     def _toward_local_flock_center(self, flock) -> pygame.Vector2:
+        # Steers boids toward avg position of flockmates
         dv = flock.avg_pos() - self.pos
         return dv
     
     def _toward_local_flock_vel(self, flock) -> pygame.Vector2:
+        # Points boids in line with flockmates
         dv = flock.avg_vel() - self.vel
         return dv
     
     def _keep_buffer(self, flock) -> pygame.Vector2:
+        # Prevents boids from colliding
         r_min = 16 # min comfortable distance between boids
 
         dv = pygame.Vector2(0, 0)
@@ -104,6 +108,7 @@ class Boid(GameObject):
         return dv
 
     def _stay_within_bounds(self) -> pygame.Vector2:
+        # Prevents boids from leaving the window
         buffer = 30
         x_min, y_min = buffer, buffer
         x_max = self.game.surface.get_width() - buffer
@@ -184,7 +189,6 @@ class Flock:
         return p_avg
 
     def avg_vel(self):
-        # Returns average velocity of boids in flock as a unit vector
         v_sum = pygame.Vector2(0, 0)
         for boid in self.boids:
             v_sum += boid.vel
