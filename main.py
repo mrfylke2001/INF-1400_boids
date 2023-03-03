@@ -90,7 +90,7 @@ class Obstacle(GameObject): # static objects
 class Character(GameObject): # moving objects
     max_speed = 0
     dir = pygame.Vector2(0, 1) # direction character points
-    scale = 0
+    scale = 0 # size of character from center to tip
 
     # Prevents characters from leaving the window
     def _stay_within_bounds(self) -> pygame.Vector2:
@@ -192,23 +192,35 @@ class Boid(Character):
 
 class Hoik(Character):
     max_speed = 3
-    scale = 18
+    scale = 24
 
-    # Returns `Boid` object to chase
-    def _get_target(self):
-        for boid in self.game.boids:
-            if self.pos.distance_to(boid.pos) <= 50:
-                return boid
-        return Boid(self.game,
-                    pygame.Vector2(400, 300),
-                    pygame.Vector2(0, 0),
-                    (0, 0, 0))
+    # Returns closest boid
+    def _get_new_target(self) -> Boid:
+        target = self.game.boids[0]
+        for boid in self.game.boids[1:]:
+            r_sq = self.pos.distance_squared_to(boid.pos)
+            if r_sq < self.pos.distance_squared_to(target.pos):
+                target = boid
+        
+        return target
+    
+    def _chase_target(self) -> pygame.Vector2:
+        r_max = 200
+
+        # Choose initial target
+        if not hasattr(self, "target"):
+            self.target = self._get_new_target()
+
+        # Choose new target if current target is too far
+        elif self.pos.distance_to(self.target.pos) > r_max:
+            self.target = self._get_new_target()
+        
+        dv = self.target.pos - self.pos
+        dv.scale_to_length(self.max_speed)
+        return dv
     
     def _accl(self) -> pygame.Vector2:
-        dv1 = self._get_target().pos - self.pos
-        dv1.scale_to_length(self.max_speed)
-
-        print(dv1)
+        dv1 = self._chase_target()
 
         dv2 = self._stay_within_bounds()
 
