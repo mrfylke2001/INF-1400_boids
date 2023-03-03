@@ -259,6 +259,14 @@ class Hoik(Character):
     def _get_new_target(self) -> Boid:
         target = self.game.boids[0]
         for boid in self.game.boids[1:]:
+            # Will not choose the same target as another hoik
+            if any([
+                hoik.target is boid
+                for hoik in self.game.hoiks
+                if hoik is not self and hasattr(hoik, "target")
+            ]):
+                continue
+
             r_sq = self.pos.distance_squared_to(boid.pos)
             if r_sq < self.pos.distance_squared_to(target.pos):
                 target = boid
