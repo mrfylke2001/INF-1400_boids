@@ -1,7 +1,6 @@
 import numpy as np
 import pygame
 from pygame.locals import *
-import random
 
 class Game:
     BKG_COLOR = (61, 61, 61)
@@ -15,22 +14,22 @@ class Game:
         self._set_up_objects(64)
 
     def _set_up_objects(self, num_boids):
-        self.boids = [
+        self.boids = np.array([
             self._generate_boid()
             for _ in range(num_boids)
-        ]
+        ])
 
         self.objects = self.boids
 
     def _generate_boid(self):
         # Initial position is randomized within the game window
-        x = random.randint(0, self.surface.get_width())
-        y = random.randint(0, self.surface.get_height())
+        x = np.random.randint(0, self.surface.get_width())
+        y = np.random.randint(0, self.surface.get_height())
         pos = pygame.Vector2(x, y)
 
         # Initial velocity has given speed in a random direction
         speed = 2
-        vel = pygame.Vector2(speed, 0).rotate(random.randint(0, 359))
+        vel = pygame.Vector2(speed, 0).rotate(np.random.randint(0, 360))
 
         boid = Boid(self, pos, vel, self.BOID_COLOR)
         return boid
@@ -49,8 +48,8 @@ class Game:
         for object in self.objects:
             object.draw()
 
+    # Starts game loop
     def play(self):
-        # Starts game loop
         while True:
             self._event_handler()
 
@@ -61,24 +60,53 @@ class Game:
             pygame.display.update()
 
 class GameObject:
-    def __init__(self, game, p_init, v_init, color):
+    def __init__(self,
+                 game: Game,
+                 p0: pygame.Vector2,
+                 v0: pygame.Vector2,
+                 color: tuple[int, int, int]):
         self.game = game
-        self.pos = p_init # initial position
-        self.vel = v_init # initial velocity
+        self.pos = p0 # initial position
+        self.vel = v0 # initial velocity
         self.color = color
 
-    def move(self):
+    def _update_vel(self):
         pass
+
+    def move(self):
+        self._update_vel()
+
+        self.pos.x += self.vel.x
+        self.pos.y += self.vel.y
 
     def draw(self):
         pass
 
-class Obstacle(GameObject):
+class Obstacle(GameObject): # static objects
     pass
 
-class Boid(GameObject):
+class Character(GameObject): # moving objects
+    max_speed = 0
+
+    def _accl(self):
+        pass
+
+    def _update_vel(self):
+        self.vel += self._accl()
+
+        # Boid speed will not exceed `max_speed`
+        if self.vel.magnitude() > self.max_speed:
+            self.vel.scale_to_length(self.max_speed)
+
+        # Boid will stay pointing in same direction if velocity is 0
+        if self.vel != pygame.Vector2(0, 0):
+            self.dir = self.vel.normalize()
+
+class Boid(Character):
+    max_speed = 4
+
+    # Returns `Flock` object with other boids within radius r
     def _get_local_flock(self, r: int):
-        # Returns `Flock` object with other boids within radius r
         local_flock = Flock([
             boid
             for boid in self.game.boids
@@ -86,18 +114,18 @@ class Boid(GameObject):
         ])
         return local_flock
     
+    # Steers boids toward avg position of flockmates
     def _toward_local_flock_center(self, flock) -> pygame.Vector2:
-        # Steers boids toward avg position of flockmates
         dv = flock.avg_pos() - self.pos
         return dv
     
+    # Points boids in line with flockmates
     def _toward_local_flock_vel(self, flock) -> pygame.Vector2:
-        # Points boids in line with flockmates
         dv = flock.avg_vel() - self.vel
         return dv
     
+    # Prevents boids from colliding
     def _keep_buffer(self, flock) -> pygame.Vector2:
-        # Prevents boids from colliding
         r_min = 16 # min comfortable distance between boids
 
         dv = pygame.Vector2(0, 0)
@@ -107,8 +135,8 @@ class Boid(GameObject):
 
         return dv
 
+    # Prevents boids from leaving the window
     def _stay_within_bounds(self) -> pygame.Vector2:
-        # Prevents boids from leaving the window
         buffer = 30
         x_min, y_min = buffer, buffer
         x_max = self.game.surface.get_width() - buffer
@@ -129,8 +157,8 @@ class Boid(GameObject):
 
         return dv
 
+    # Calculates 'acceleration' i.e. change in velocity
     def _accl(self) -> pygame.Vector2:
-        # Calculate 'acceleration' i.e. change in velocity
         local_flock = self._get_local_flock(r=50)
         dv1 = self._toward_local_flock_center(local_flock)
         dv2 = self._toward_local_flock_vel(local_flock)
@@ -138,26 +166,9 @@ class Boid(GameObject):
 
         dv4 = self._stay_within_bounds()
 
+        # Change in velocity is weighted sum of components from each rule
         dv = 0.02*dv1 + 0.03*dv2 + 0.4*dv3 + dv4
         return dv
-    
-    def _update_vel(self):
-        max_speed = 4
-        self.vel += self._accl()
-
-        # Boid speed will not exceed `max_speed`
-        if self.vel.magnitude() > max_speed:
-            self.vel.scale_to_length(max_speed)
-
-        # Boid will stay pointing in same direction if velocity is 0
-        if self.vel != pygame.Vector2(0, 0):
-            self.dir = self.vel.normalize()
-        
-    def move(self):
-        self._update_vel()
-
-        self.pos.x += self.vel.x
-        self.pos.y += self.vel.y
 
     def draw(self):
         scale = 6
@@ -168,12 +179,11 @@ class Boid(GameObject):
 
         pygame.draw.polygon(self.game.surface, self.color, vertices)
 
-class Hoik(GameObject):
-    def _get_dir(self):
-        pass
+class Hoik(Character):
+    max_speed = 3
 
+    # Returns `Boid` object to chase
     def _get_target(self):
-        # Returns `Boid` object to chase
         pass
 
 class Flock:
