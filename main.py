@@ -255,23 +255,19 @@ class Boid(Character):
 class Hoik(Character):
     MAX_SPEED = 2
 
-    # Returns closest boid
     def _get_new_target(self) -> Boid:
-        target = self.game.boids[0]
-        for boid in self.game.boids[1:]:
-            # Will not choose the same target as another hoik
-            if any([
+        # Sort boids by distance
+        dist_key = lambda boid : self.pos.distance_squared_to(boid.pos)
+        boids_by_dist = sorted(self.game.boids, key=dist_key)
+
+        # Return the closest boid not already targeted by another hoik
+        for boid in boids_by_dist:
+            if not any([
                 hoik.target is boid
                 for hoik in self.game.hoiks
-                if hoik is not self and hasattr(hoik, "target")
+                if hasattr(hoik, "target") and hoik is not self
             ]):
-                continue
-
-            r_sq = self.pos.distance_squared_to(boid.pos)
-            if r_sq < self.pos.distance_squared_to(target.pos):
-                target = boid
-        
-        return target
+                return boid
     
     def _chase_target(self) -> pygame.Vector2:
         r_max = 200
