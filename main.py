@@ -144,12 +144,13 @@ class Boid(GameObject):
     def _update_vel(self):
         max_speed = 4
         self.vel += self._accl()
+
+        # Boid speed will not exceed `max_speed`
         if self.vel.magnitude() > max_speed:
             self.vel.scale_to_length(max_speed)
 
-        if self.vel == pygame.Vector2(0, 0):
-            self.dir = pygame.Vector2(0, 1)
-        else:
+        # Boid will stay pointing in same direction if velocity is 0
+        if self.vel != pygame.Vector2(0, 0):
             self.dir = self.vel.normalize()
         
     def move(self):
