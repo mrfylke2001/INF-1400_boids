@@ -42,17 +42,17 @@ class Game:
             for _ in range(n_boids)
         ])
 
-        self.hoiks = np.array([
-            self._generate_hoik()
-            for _ in range(n_hoiks)
-        ])
-
         self.obstacles = np.array([
             self._generate_obst()
             for _ in range(n_obstacles)
         ])
 
-        self.objects = np.concatenate((self.boids, self.hoiks, self.obstacles))
+        self.hoiks = np.array([
+            self._generate_hoik()
+            for _ in range(n_hoiks)
+        ])
+
+        self.objects = np.concatenate((self.boids, self.obstacles, self.hoiks))
 
     # Returns a random position within the game window
     def _random_pos(self, buffer=0) -> pygame.Vector2:
@@ -77,7 +77,7 @@ class Game:
 
     def _generate_obst(self):
         size = np.random.randint(self.OBST_SIZE_MIN, self.OBST_SIZE_MAX)
-        
+
         # Edge of obstacle should have some distance from window edge
         pos = self._random_pos(buffer=1.5*size)
         vel = pygame.Vector2(0, 0)
@@ -229,6 +229,15 @@ class Boid(Character):
             if self.pos.distance_to(hoik.pos) < r_min
         ])
         return dv
+    
+    def _avoid_obstacles(self) -> pygame.Vector2:
+        r_min = 16 # min comfortable distance to edge of obstacle
+        dv = v2_sum([
+            self.pos - obst.pos # vector pointing away from obstacle
+            for obst in self.game.obstacles
+            if self.pos.distance_to(obst.pos) < r_min + obst.size
+        ])
+        return dv
 
     def _accl(self) -> pygame.Vector2:
         local_flock = self._get_local_flock(r=64)
@@ -237,6 +246,7 @@ class Boid(Character):
             0.03*self._toward_local_flock_vel(local_flock),
             0.4*self._avoid_flockmates(local_flock),
             0.2*self._avoid_hoiks(),
+            0.2*self._avoid_obstacles(),
             self._stay_within_bounds()
         ]) # components are weighted for desired behavior
         dv = v2_sum(accl_components)
