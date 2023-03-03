@@ -294,11 +294,11 @@ class Flock:
         self.boids = np.array(boids)
         self.n_boids = len(boids)
 
-    def avg_pos(self):
+    def avg_pos(self) -> pygame.Vector2:
         p_avg = v2_sum([boid.pos for boid in self.boids]) / self.n_boids
         return p_avg
 
-    def avg_vel(self):
+    def avg_vel(self) -> pygame.Vector2:
         v_avg = v2_sum([boid.vel for boid in self.boids]) / self.n_boids
         return v_avg
 
