@@ -94,11 +94,11 @@ class Character(GameObject): # moving objects
     def _update_vel(self):
         self.vel += self._accl()
 
-        # Boid speed will not exceed `max_speed`
+        # Character speed will not exceed `max_speed`
         if self.vel.magnitude() > self.max_speed:
             self.vel.scale_to_length(self.max_speed)
 
-        # Boid will stay pointing in same direction if velocity is 0
+        # Character will stay pointing in same direction if velocity is 0
         if self.vel != pygame.Vector2(0, 0):
             self.dir = self.vel.normalize()
 
