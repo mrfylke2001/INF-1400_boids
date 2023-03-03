@@ -2,10 +2,17 @@ import numpy as np
 import pygame
 from pygame.locals import *
 
+# Returns sum of `pygame.Vector2` objects
+def v2_sum(vectors: tuple[pygame.Vector2]) -> pygame.Vector2:
+    vector_sum = pygame.Vector2(0, 0)
+    for vec in vectors:
+        vector_sum += vec
+    return vector_sum
+
 class Game:
     BKG_COLOR = (61, 61, 61)
     BOID_COLOR = (109, 157, 201)
-    HOIK_COLOR = (156, 102, 227)
+    HOIK_COLOR = (227, 177, 52)
 
     def __init__(self, size: tuple[int, int]):
         pygame.init()
@@ -88,9 +95,9 @@ class Obstacle(GameObject): # static objects
     pass
 
 class Character(GameObject): # moving objects
-    max_speed = 0
+    MAX_SPEED = 0
+    SCALE = 0 # size of character from center to tip
     dir = pygame.Vector2(0, 1) # direction character points
-    scale = 0 # size of character from center to tip
 
     # Prevents characters from leaving the window
     def _stay_within_bounds(self) -> pygame.Vector2:
@@ -122,9 +129,9 @@ class Character(GameObject): # moving objects
     def _update_vel(self):
         self.vel += self._accl()
 
-        # Character speed will not exceed `max_speed`
-        if self.vel.magnitude() > self.max_speed:
-            self.vel.scale_to_length(self.max_speed)
+        # Character speed will not exceed `MAX_SPEED`
+        if self.vel.magnitude() > self.MAX_SPEED:
+            self.vel.scale_to_length(self.MAX_SPEED)
 
         # Character will stay pointing in same direction if velocity is 0
         if self.vel != pygame.Vector2(0, 0):
@@ -138,15 +145,15 @@ class Character(GameObject): # moving objects
 
     def draw(self):
         vertices = [
-            pygame.Vector2(self.pos + self.scale*self.dir.rotate(120*i))
+            pygame.Vector2(self.pos + self.SCALE*self.dir.rotate(120*i))
             for i in range(3)
         ] # for an equilateral triangle centered at `pos`
 
         pygame.draw.polygon(self.game.surface, self.color, vertices)
 
 class Boid(Character):
-    max_speed = 4
-    scale = 6
+    MAX_SPEED = 4
+    SCALE = 6
 
     # Returns `Flock` object with other boids within radius r
     def _get_local_flock(self, r: int):
@@ -168,44 +175,39 @@ class Boid(Character):
         return dv
     
     # Prevents boids from colliding
-    def _keep_buffer(self, flock) -> pygame.Vector2:
+    def _avoid_flockmates(self, flock) -> pygame.Vector2:
         r_min = 16 # min comfortable distance between boids
-
-        dv = pygame.Vector2(0, 0)
-        for boid in flock.boids:
-            if self.pos.distance_to(boid.pos) < r_min:
-                dv -= (boid.pos - self.pos)
-
+        dv = v2_sum([
+            self.pos - boid.pos # vector pointing away from flockmate
+            for boid in flock.boids
+            if self.pos.distance_to(boid.pos) < r_min
+        ])
         return dv
     
     def _avoid_hoiks(self) -> pygame.Vector2:
         r_min = 64 # min comfortable distance to hoik
-
-        dv = pygame.Vector2(0, 0)
-        for hoik in self.game.hoiks:
-            if self.pos.distance_to(hoik.pos) < r_min:
-                dv -= (hoik.pos - self.pos)
-
+        dv = v2_sum([
+            self.pos - hoik.pos # vector pointing away from hoik
+            for hoik in self.game.hoiks
+            if self.pos.distance_to(hoik.pos) < r_min
+        ])
         return dv
-
 
     def _accl(self) -> pygame.Vector2:
         local_flock = self._get_local_flock(r=64)
-        dv1 = self._toward_local_flock_center(local_flock)
-        dv2 = self._toward_local_flock_vel(local_flock)
-        dv3 = self._keep_buffer(local_flock)
-
-        dv4 = self._avoid_hoiks()
-
-        dv5 = self._stay_within_bounds()
-
-        # Change in velocity is weighted sum of components from each rule
-        dv = 0.02*dv1 + 0.03*dv2 + 0.4*dv3 + 0.2*dv4 + dv5
+        accl_components = np.array([
+            0.02*self._toward_local_flock_center(local_flock),
+            0.03*self._toward_local_flock_vel(local_flock),
+            0.4*self._avoid_flockmates(local_flock),
+            0.2*self._avoid_hoiks(),
+            self._stay_within_bounds()
+        ]) # components are weighted for desired behavior
+        dv = v2_sum(accl_components)
         return dv
 
 class Hoik(Character):
-    max_speed = 3
-    scale = 24
+    MAX_SPEED = 2
+    SCALE = 24
 
     # Returns closest boid
     def _get_new_target(self) -> Boid:
@@ -220,7 +222,7 @@ class Hoik(Character):
     def _chase_target(self) -> pygame.Vector2:
         r_max = 200
 
-        # Choose initial target
+        # Choose initial target if one does not exist
         if not hasattr(self, "target"):
             self.target = self._get_new_target()
 
@@ -229,15 +231,13 @@ class Hoik(Character):
             self.target = self._get_new_target()
         
         dv = self.target.pos - self.pos
-        dv.scale_to_length(self.max_speed)
+        dv.scale_to_length(self.MAX_SPEED)
         return dv
     
     def _accl(self) -> pygame.Vector2:
         dv1 = self._chase_target()
-
         dv2 = self._stay_within_bounds()
-
-        return 0.5*dv1 + dv2
+        return dv1 + dv2
 
 class Flock:
     def __init__(self, boids: list[Boid]):
@@ -245,19 +245,11 @@ class Flock:
         self.num_boids = len(boids)
 
     def avg_pos(self):
-        p_sum = pygame.Vector2(0, 0)
-        for boid in self.boids:
-            p_sum += boid.pos
-        p_avg = p_sum / self.num_boids
-
+        p_avg = v2_sum([boid.pos for boid in self.boids]) / self.num_boids
         return p_avg
 
     def avg_vel(self):
-        v_sum = pygame.Vector2(0, 0)
-        for boid in self.boids:
-            v_sum += boid.vel
-        v_avg = v_sum / self.num_boids
-
+        v_avg = v2_sum([boid.vel for boid in self.boids]) / self.num_boids
         return v_avg
 
 if __name__ == "__main__":
