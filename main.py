@@ -99,7 +99,7 @@ class Character(GameObject): # moving objects
         x_max = self.game.surface.get_width() - buffer
         y_max = self.game.surface.get_height() - buffer
 
-        rebound_speed = 2
+        rebound_speed = 10
         dv = pygame.Vector2(0, 0)
 
         if self.pos.x < x_min:
@@ -177,17 +177,30 @@ class Boid(Character):
                 dv -= (boid.pos - self.pos)
 
         return dv
+    
+    def _avoid_hoiks(self) -> pygame.Vector2:
+        r_min = 64 # min comfortable distance to hoik
+
+        dv = pygame.Vector2(0, 0)
+        for hoik in self.game.hoiks:
+            if self.pos.distance_to(hoik.pos) < r_min:
+                dv -= (hoik.pos - self.pos)
+
+        return dv
+
 
     def _accl(self) -> pygame.Vector2:
-        local_flock = self._get_local_flock(r=50)
+        local_flock = self._get_local_flock(r=64)
         dv1 = self._toward_local_flock_center(local_flock)
         dv2 = self._toward_local_flock_vel(local_flock)
         dv3 = self._keep_buffer(local_flock)
 
-        dv4 = self._stay_within_bounds()
+        dv4 = self._avoid_hoiks()
+
+        dv5 = self._stay_within_bounds()
 
         # Change in velocity is weighted sum of components from each rule
-        dv = 0.02*dv1 + 0.03*dv2 + 0.4*dv3 + dv4
+        dv = 0.02*dv1 + 0.03*dv2 + 0.4*dv3 + 0.2*dv4 + dv5
         return dv
 
 class Hoik(Character):
@@ -224,7 +237,7 @@ class Hoik(Character):
 
         dv2 = self._stay_within_bounds()
 
-        return dv1 + dv2
+        return 0.5*dv1 + dv2
 
 class Flock:
     def __init__(self, boids: list[Boid]):
