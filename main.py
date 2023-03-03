@@ -2,12 +2,18 @@ import numpy as np
 import pygame
 from pygame.locals import *
 
-# Returns sum of `pygame.Vector2` objects
+# Returns sum of 2D vectors
 def v2_sum(vectors: tuple[pygame.Vector2]) -> pygame.Vector2:
     vector_sum = pygame.Vector2(0, 0)
     for vec in vectors:
         vector_sum += vec
     return vector_sum
+
+# Returns a 2D unit vector in a random direction
+def rand_unit_v2(theta_min=0, theta_max=360) -> pygame.Vector2:
+    theta = np.random.randint(theta_min, theta_max)
+    vec = pygame.Vector2(1, 0).rotate(theta)
+    return vec
 
 class Game:
     BKG_COLOR = (61, 61, 61)
@@ -37,39 +43,47 @@ class Game:
         ])
 
         self.hoiks = np.array([
-            Hoik(self,
-                 pygame.Vector2(100, 500),
-                 pygame.Vector2(1, 1),
-                 self.HOIK_COLOR,
-                 self.HOIK_SIZE)
+            self._generate_hoik()
+            for _ in range(n_hoiks)
         ])
 
         self.obstacles = np.array([
-            Obstacle(self,
-                     pygame.Vector2(200, 200),
-                     pygame.Vector2(0, 0),
-                     self.OBST_COLOR,
-                     self.OBST_SIZE_MAX)
+            self._generate_obst()
+            for _ in range(n_obstacles)
         ])
 
         self.objects = np.concatenate((self.boids, self.hoiks, self.obstacles))
 
-    def _random_pos(self):
-        x = np.random.randint(0, self.surface.get_width())
-        y = np.random.randint(0, self.surface.get_height())
+    # Returns a random position within the game window
+    def _random_pos(self, buffer=0) -> pygame.Vector2:
+        x = np.random.randint(buffer, self.surface.get_width() - buffer)
+        y = np.random.randint(buffer, self.surface.get_height() - buffer)
         pos = pygame.Vector2(x, y)
         return pos
 
     def _generate_boid(self):
-        # Initial position is randomized within the game window
-        pos = self._random_pos()
-
-        # Initial velocity has given speed in a random direction
-        speed = 2
-        vel = pygame.Vector2(speed, 0).rotate(np.random.randint(0, 360))
+        pos = self._random_pos(buffer=self.BOID_SIZE)
+        vel = 3*rand_unit_v2() # starting speed is 3
 
         boid = Boid(self, pos, vel, self.BOID_COLOR, self.BOID_SIZE)
         return boid
+    
+    def _generate_hoik(self):
+        pos = self._random_pos(buffer=self.HOIK_SIZE)
+        vel = 2*rand_unit_v2() # starting speed is 2
+
+        hoik = Hoik(self, pos, vel, self.HOIK_COLOR, self.HOIK_SIZE)
+        return hoik
+
+    def _generate_obst(self):
+        size = np.random.randint(self.OBST_SIZE_MIN, self.OBST_SIZE_MAX)
+        
+        # Edge of obstacle should have some distance from window edge
+        pos = self._random_pos(buffer=1.5*size)
+        vel = pygame.Vector2(0, 0)
+
+        obst = Obstacle(self, pos, vel, self.OBST_COLOR, size)
+        return obst
 
     def _event_handler(self):
         for event in pygame.event.get():
@@ -275,5 +289,5 @@ class Flock:
         return v_avg
 
 if __name__ == "__main__":
-    boids_game = Game((800, 600), 64, 2, 1)
+    boids_game = Game((800, 600), 64, 2, 3)
     boids_game.play()
