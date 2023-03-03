@@ -13,40 +13,62 @@ class Game:
     BKG_COLOR = (61, 61, 61)
     BOID_COLOR = (109, 157, 201)
     HOIK_COLOR = (227, 177, 52)
+    OBST_COLOR = (0, 0, 0)
 
-    def __init__(self, size: tuple[int, int]):
+    BOID_SIZE = 6
+    HOIK_SIZE = 24
+    OBST_SIZE_MIN, OBST_SIZE_MAX = 32, 64
+
+    def __init__(self,
+                 size: tuple[int, int],
+                 n_boids: int,
+                 n_hoiks: int,
+                 n_obstacles: int):
         pygame.init()
         self.surface = pygame.display.set_mode(size)
         pygame.display.set_caption("Boids")
 
-        self._set_up_objects(64)
+        self._set_up_objects(n_boids, n_hoiks, n_obstacles)
 
-    def _set_up_objects(self, num_boids):
+    def _set_up_objects(self, n_boids, n_hoiks, n_obstacles):
         self.boids = np.array([
             self._generate_boid()
-            for _ in range(num_boids)
+            for _ in range(n_boids)
         ])
 
         self.hoiks = np.array([
             Hoik(self,
                  pygame.Vector2(100, 500),
                  pygame.Vector2(1, 1),
-                 self.HOIK_COLOR)
+                 self.HOIK_COLOR,
+                 self.HOIK_SIZE)
         ])
 
-        self.objects = np.concatenate((self.boids, self.hoiks))
+        self.obstacles = np.array([
+            Obstacle(self,
+                     pygame.Vector2(200, 200),
+                     pygame.Vector2(0, 0),
+                     self.OBST_COLOR,
+                     self.OBST_SIZE_MAX)
+        ])
 
-    def _generate_boid(self):
-        # Initial position is randomized within the game window
+        self.objects = np.concatenate((self.boids, self.hoiks, self.obstacles))
+
+    def _random_pos(self):
         x = np.random.randint(0, self.surface.get_width())
         y = np.random.randint(0, self.surface.get_height())
         pos = pygame.Vector2(x, y)
+        return pos
+
+    def _generate_boid(self):
+        # Initial position is randomized within the game window
+        pos = self._random_pos()
 
         # Initial velocity has given speed in a random direction
         speed = 2
         vel = pygame.Vector2(speed, 0).rotate(np.random.randint(0, 360))
 
-        boid = Boid(self, pos, vel, self.BOID_COLOR)
+        boid = Boid(self, pos, vel, self.BOID_COLOR, self.BOID_SIZE)
         return boid
 
     def _event_handler(self):
@@ -79,11 +101,13 @@ class GameObject:
                  game: Game,
                  p0: pygame.Vector2,
                  v0: pygame.Vector2,
-                 color: tuple[int, int, int]):
+                 color: tuple[int, int, int],
+                 size: int):
         self.game = game
         self.pos = p0 # initial position
         self.vel = v0 # initial velocity
         self.color = color
+        self.size = size # radius
 
     def move(self):
         pass
@@ -92,11 +116,11 @@ class GameObject:
         pass
 
 class Obstacle(GameObject): # static objects
-    pass
+    def draw(self):
+        pygame.draw.circle(self.game.surface, self.color, self.pos, self.size)
 
 class Character(GameObject): # moving objects
     MAX_SPEED = 0
-    SCALE = 0 # size of character from center to tip
     dir = pygame.Vector2(0, 1) # direction character points
 
     # Prevents characters from leaving the window
@@ -145,7 +169,7 @@ class Character(GameObject): # moving objects
 
     def draw(self):
         vertices = [
-            pygame.Vector2(self.pos + self.SCALE*self.dir.rotate(120*i))
+            pygame.Vector2(self.pos + self.size*self.dir.rotate(120*i))
             for i in range(3)
         ] # for an equilateral triangle centered at `pos`
 
@@ -153,7 +177,6 @@ class Character(GameObject): # moving objects
 
 class Boid(Character):
     MAX_SPEED = 4
-    SCALE = 6
 
     # Returns `Flock` object with other boids within radius r
     def _get_local_flock(self, r: int):
@@ -207,7 +230,6 @@ class Boid(Character):
 
 class Hoik(Character):
     MAX_SPEED = 2
-    SCALE = 24
 
     # Returns closest boid
     def _get_new_target(self) -> Boid:
@@ -242,16 +264,16 @@ class Hoik(Character):
 class Flock:
     def __init__(self, boids: list[Boid]):
         self.boids = np.array(boids)
-        self.num_boids = len(boids)
+        self.n_boids = len(boids)
 
     def avg_pos(self):
-        p_avg = v2_sum([boid.pos for boid in self.boids]) / self.num_boids
+        p_avg = v2_sum([boid.pos for boid in self.boids]) / self.n_boids
         return p_avg
 
     def avg_vel(self):
-        v_avg = v2_sum([boid.vel for boid in self.boids]) / self.num_boids
+        v_avg = v2_sum([boid.vel for boid in self.boids]) / self.n_boids
         return v_avg
 
 if __name__ == "__main__":
-    boids_game = Game((800, 600))
+    boids_game = Game((800, 600), 64, 2, 1)
     boids_game.play()
