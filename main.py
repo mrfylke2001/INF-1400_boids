@@ -242,8 +242,8 @@ class Boid(Character):
     def _accl(self) -> pygame.Vector2:
         local_flock = self._get_local_flock(r=64)
         accl_components = np.array([
-            0.02*self._toward_local_flock_center(local_flock),
-            0.03*self._toward_local_flock_vel(local_flock),
+            0.01*self._toward_local_flock_center(local_flock),
+            0.08*self._toward_local_flock_vel(local_flock),
             0.4*self._avoid_flockmates(local_flock),
             0.2*self._avoid_hoiks(),
             0.2*self._avoid_obstacles(),
